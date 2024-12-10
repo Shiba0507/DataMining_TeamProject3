@@ -1,3 +1,6 @@
+from sklearn.feature_extraction.text import TfidfVectorizer
+from flask import jsonify
+from sklearn.metrics.pairwise import cosine_similarity
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import sqlite3
@@ -15,16 +18,20 @@ CORS(app)  # Cho phép kết nối từ React frontend
 DB_NAME = 'user_manga.db'
 
 # Kết nối cơ sở dữ liệu SQLite
+
+
 def get_db_connection():
     conn = sqlite3.connect(DB_NAME)
     conn.row_factory = sqlite3.Row
     return conn
 
 # Tạo các bảng trong cơ sở dữ liệu
+
+
 def init_db():
     conn = get_db_connection()
     cursor = conn.cursor()
-    
+
     # Tạo bảng manga để lưu trữ thông tin về manga, bao gồm bìa và nội dung
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS manga (
@@ -59,16 +66,19 @@ def init_db():
     conn.close()
 
 # API đăng ký tài khoản
+
+
 @app.route('/api/register', methods=['POST'])
 def register_user():
     data = request.json
     username = data['username']
     password = data['password']
-    
+
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
-        cursor.execute('INSERT INTO users (username, password) VALUES (?, ?)', (username, password))
+        cursor.execute(
+            'INSERT INTO users (username, password) VALUES (?, ?)', (username, password))
         conn.commit()
         return jsonify({"message": "User registered successfully!"}), 201
     except sqlite3.IntegrityError:
@@ -77,24 +87,29 @@ def register_user():
         conn.close()
 
 # API đăng nhập
+
+
 @app.route('/api/login', methods=['POST'])
 def login_user():
     data = request.json
     username = data['username']
     password = data['password']
-    
+
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute('SELECT * FROM users WHERE username = ? AND password = ?', (username, password))
+    cursor.execute(
+        'SELECT * FROM users WHERE username = ? AND password = ?', (username, password))
     user = cursor.fetchone()
     conn.close()
-    
+
     if user:
         return jsonify({"user_id": user['id'], "username": user['username']}), 200
     else:
         return jsonify({"error": "Invalid username or password"}), 401
 
 # API thêm manga vào lịch sử đọc
+
+
 @app.route('/api/add-manga', methods=['POST'])
 def add_manga():
     data = request.json
@@ -102,8 +117,9 @@ def add_manga():
     manga_title = data['manga_title']
     cover_image = data.get('cover_image', '')  # Đường dẫn bìa
     content = data.get('content', '')          # Nội dung manga
-    last_read_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')  # Thời gian đọc manga
-    
+    last_read_at = datetime.now().strftime(
+        '%Y-%m-%d %H:%M:%S')  # Thời gian đọc manga
+
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute('''
@@ -113,10 +129,12 @@ def add_manga():
     ''', (user_id, manga_title, last_read_at, cover_image, content))
     conn.commit()
     conn.close()
-    
+
     return jsonify({"message": f"'{manga_title}' added to your reading history"}), 201
 
 # API lấy lịch sử đọc manga của người dùng
+
+
 @app.route('/api/manga-history/<int:user_id>', methods=['GET'])
 def get_manga_history(user_id):
     conn = get_db_connection()
@@ -128,7 +146,7 @@ def get_manga_history(user_id):
     ''', (user_id,))
     history = cursor.fetchall()
     conn.close()
-    
+
     if history:
         return jsonify([
             {
@@ -142,21 +160,20 @@ def get_manga_history(user_id):
         return jsonify({"message": "No manga history found"}), 404
 
 
-
 @app.route('/api/delete-manga-history', methods=['DELETE'])
 def delete_manga_history():
     data = request.json
     user_id = data['user_id']
     manga_title = data['manga_title']
-    
+
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute('DELETE FROM manga_reading_history WHERE user_id = ? AND manga_title = ?', (user_id, manga_title))
+    cursor.execute(
+        'DELETE FROM manga_reading_history WHERE user_id = ? AND manga_title = ?', (user_id, manga_title))
     conn.commit()
     conn.close()
-    
-    return jsonify({"message": "Manga removed from history"}), 200
 
+    return jsonify({"message": "Manga removed from history"}), 200
 
 
 # Chức năng tải manga từ MangaDex
@@ -177,28 +194,33 @@ def fetch_and_save_manga_from_mangadex():
         for manga in mangas:
             # Lấy thông tin cơ bản
             title = manga["attributes"]["title"].get("en", "").strip()
-            description = manga["attributes"]["description"].get("en", "").strip()
+            description = manga["attributes"]["description"].get(
+                "en", "").strip()
 
             if not title or not description:  # Bỏ qua nếu thiếu tiêu đề hoặc mô tả
-                print(f"Skipping manga due to missing title or description: {manga['id']}")
+                print(f"Skipping manga due to missing title or description: {
+                      manga['id']}")
                 continue
 
             # Lấy thông tin bìa
             manga_id = manga["id"]
-            cover_response = requests.get(f"{base_url}/cover", params={"manga[]": manga_id})
+            cover_response = requests.get(
+                f"{base_url}/cover", params={"manga[]": manga_id})
             cover_image = ""
             if cover_response.status_code == 200:
                 covers = cover_response.json().get("data", [])
                 if covers:
                     cover_file = covers[0]["attributes"]["fileName"]
-                    cover_image = f"https://uploads.mangadex.org/covers/{manga_id}/{cover_file}"
+                    cover_image = f"https://uploads.mangadex.org/covers/{
+                        manga_id}/{cover_file}"
 
             if not cover_image:  # Bỏ qua nếu không có bìa
                 print(f"Skipping manga due to missing cover image: {title}")
                 continue
 
             # Check if manga already exists in the database
-            cursor.execute('SELECT COUNT(*) FROM manga WHERE title = ?', (title,))
+            cursor.execute(
+                'SELECT COUNT(*) FROM manga WHERE title = ?', (title,))
             exists = cursor.fetchone()[0] > 0
 
             if not exists:
@@ -217,7 +239,6 @@ def fetch_and_save_manga_from_mangadex():
         print(f"Error fetching manga: {e}")
 
 
-
 # Chạy cập nhật manga trong một luồng riêng biệt
 def continuously_update_manga(interval=60):
     while True:
@@ -231,10 +252,11 @@ def continuously_update_manga(interval=60):
 def get_manga_details(manga_id):
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute('SELECT title, cover_image, content FROM manga WHERE id = ?', (manga_id,))
+    cursor.execute(
+        'SELECT title, cover_image, content FROM manga WHERE id = ?', (manga_id,))
     manga = cursor.fetchone()
     conn.close()
-    
+
     if manga:
         return jsonify({
             "title": manga["title"],
@@ -243,10 +265,8 @@ def get_manga_details(manga_id):
         }), 200
     else:
         return jsonify({"message": "Manga not found"}), 404
-    
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
-from flask import jsonify
+
+
 @app.route('/api/recommend-manga/<int:user_id>', methods=['GET'])
 def recommend_manga(user_id):
     conn = get_db_connection()
@@ -281,7 +301,8 @@ def recommend_manga(user_id):
 
     # Create the TF-IDF matrix combining user history and all manga content
     vectorizer = TfidfVectorizer(stop_words='english')
-    tfidf_matrix = vectorizer.fit_transform(user_read_contents + manga_contents)
+    tfidf_matrix = vectorizer.fit_transform(
+        user_read_contents + manga_contents)
 
     # Separate user vector and manga vectors
     user_vector = tfidf_matrix[:len(user_read_contents)]
@@ -296,27 +317,27 @@ def recommend_manga(user_id):
     for idx, manga in enumerate(all_manga):
         if manga['title'] not in read_titles:  # Exclude manga already read by the user
             # Check if the manga is not too similar to any of the user's read history
-            is_similar_to_read = any(similarity > 0.05 for similarity in similarities[:, idx])
+            is_similar_to_read = any(
+                similarity > 0.05 for similarity in similarities[:, idx])
             if not is_similar_to_read:
                 recommended.append({
                     "manga_title": manga['title'],
                     "cover_image": manga['cover_image'],
                     "content": manga['content'],
-                    "similarity_score": max(similarities[:, idx])  # Get the highest similarity score
+                    # Get the highest similarity score
+                    "similarity_score": max(similarities[:, idx])
                 })
 
     # Sort recommendations by similarity score in descending order
-    recommended = sorted(recommended, key=lambda x: x['similarity_score'], reverse=True)
+    recommended = sorted(
+        recommended, key=lambda x: x['similarity_score'], reverse=True)
 
     # Return top 10 manga recommendations
     if recommended:
-        return jsonify(recommended[:10]), 200  # Limit to top 10 recommendations
+        # Limit to top 10 recommendations
+        return jsonify(recommended[:10]), 200
     else:
         return jsonify({"message": "No recommendations found based on your history."}), 404
-
-
-
-
 
 
 emotion_keywords = {
@@ -353,13 +374,15 @@ def search_by_emotion():
     result = []
     for manga in manga_data:
         title, content, cover_image = manga
-        
+
         # Check for keyword matches
-        matches = sum(1 for keyword in keywords if re.search(rf"\b{keyword}\b", content, re.IGNORECASE))
-        
+        matches = sum(1 for keyword in keywords if re.search(
+            rf"\b{keyword}\b", content, re.IGNORECASE))
+
         if matches > 0 and title not in seen_titles and content not in seen_content:
             seen_titles.add(title)
-            seen_content.add(content)  # Add content to the set to avoid duplicates
+            # Add content to the set to avoid duplicates
+            seen_content.add(content)
             result.append({
                 "title": title,
                 "content": content,
@@ -376,15 +399,11 @@ def search_by_emotion():
     return jsonify(result), 200
 
 
-
-
-
-
 if __name__ == '__main__':
     # Khởi tạo cơ sở dữ liệu (nếu chưa có)
     init_db()
     # Chạy luồng cập nhật manga
-    updater_thread = threading.Thread(target=continuously_update_manga, args=(600,), daemon=True)
+    updater_thread = threading.Thread(
+        target=continuously_update_manga, args=(600,), daemon=True)
     updater_thread.start()
     app.run(debug=True)
-
