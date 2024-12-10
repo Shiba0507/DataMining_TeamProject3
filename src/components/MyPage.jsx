@@ -148,10 +148,10 @@ function Mypage({ user, setUser }) {
 </div>
 
 
-                    <div className="mt-8">
+<div className="mt-8">
     <h3 className="text-xl font-semibold text-green-400 mb-4">Recommended Manga</h3>
     {recommendedManga.length > 0 ? (
-        <div className="flex space-x-6 overflow-x-auto pb-4">
+        <div className="flex space-x-6 overflow-x-auto pb-4 overflow-y-hidden">
             {recommendedManga.map((item, index) => {
                 const coverArt = item.cover_image || null;
                 return (
@@ -185,6 +185,7 @@ function Mypage({ user, setUser }) {
         <p>No recommendations found.</p>
     )}
 </div>
+
 
 
 

@@ -18,45 +18,49 @@ function MangaList({ title, manga }) {
       : "https://via.placeholder.com/256x384.png?text=No+Image";
   };
 
+  const getSanitizedTitle = (title) => {
+    // Replace spaces with dashes and encode URI to make it safe for URLs
+    return encodeURIComponent(title.replace(/\s+/g, "-").toLowerCase());
+  };
+
   return (
     <div className="text-white p-6 mb-6 bg-gradient-to-r from-gray-900 via-black to-gray-900 rounded-xl shadow-lg">
       <h2 className="uppercase text-3xl font-extrabold mb-4 text-center text-transparent bg-clip-text bg-gradient-to-r from-green-700 to-green-300">
-
         {title}
       </h2>
-      <Carousel
-        responsive={responsive}
-        className="flex items-center space-x-4"
-        containerClass="carousel-container"
-        itemClass="carousel-item"
-      >
-        {manga.map((item) => (
-          <div
-            key={item.id}
-            className="bg-gray-800 p-4 rounded-lg overflow-hidden shadow-lg transform hover:scale-105 transition-transform duration-300 relative group border border-transparent hover:border-gradient-to-r from-green-400 to-blue-500"
-          >
-            <img
-              src={getCoverImage(item)}
-              alt={item.attributes?.title?.en || "Unknown Title"}
-              className="w-full h-64 object-cover rounded-lg mb-2"
-            />
-            <h3 className="text-center text-lg font-semibold text-white truncate mb-2">
-              {item.attributes?.title?.en || "Unknown Title"}
-            </h3>
-            <div
-              className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-              style={{ backgroundColor: "rgba(0, 0, 0, 0.6)" }}
-            >
-              <Link
-                to={`/manga/${item.attributes?.title?.en}`}
-                className="px-6 py-2 bg-gradient-to-r from-green-500 to-blue-200 text-white font-bold rounded-lg hover:from-blue-200 hover:to-green-500"
-              >
-                Read Manga
+      <div className="relative">
+        <Carousel
+          responsive={responsive}
+          infinite={true}
+          autoPlay={true}
+          autoPlaySpeed={3000}
+          transitionDuration={500}
+          className="flex space-x-6 overflow-x-auto pb-4 overflow-y-hidden"
+        >
+          {manga.map((item, index) => {
+            const coverArt = getCoverImage(item);
+            const mangaTitle = item.attributes?.title?.en || "Unknown Title";
+            const sanitizedTitle = getSanitizedTitle(mangaTitle);
+
+            return (
+              <Link to={`/manga/${sanitizedTitle}`} key={index}>
+                <div className="relative flex-shrink-0 w-64 transform hover:scale-105 transition-all duration-300 ease-in-out group">
+                  <img
+                    src={coverArt}
+                    alt={mangaTitle}
+                    className="w-64 h-96 object-cover rounded-lg transition-all duration-300 transform group-hover:scale-105 group-hover:rotate-3"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end">
+                    <h3 className="text-center text-green-500 text-lg font-semibold px-2 py-4 bg-opacity-75 w-full">
+                      {mangaTitle}
+                    </h3>
+                  </div>
+                </div>
               </Link>
-            </div>
-          </div>
-        ))}
-      </Carousel>
+            );
+          })}
+        </Carousel>
+      </div>
     </div>
   );
 }

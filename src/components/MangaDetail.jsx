@@ -3,32 +3,37 @@ import { useParams } from "react-router-dom";
 import { useState, useEffect } from "react";
 
 function MangaDetail({ user }) {
-  const { title } = useParams();  // Get manga title from URL params
+  const { title } = useParams();  // Lấy tiêu đề manga từ URL
   const [manga, setManga] = useState(null);
   const [chapters, setChapters] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [isAdding, setIsAdding] = useState(false);  // State to track manga adding process
+  const [isAdding, setIsAdding] = useState(false);
 
   useEffect(() => {
+    window.scrollTo(0, 0);  // Cuộn trang về đầu khi trang tải lại
+
     const fetchMangaDetails = async () => {
       setLoading(true);
       try {
-        // Fetch manga details by title (assuming API allows searching by title)
         const mangaResponse = await fetch(
           `https://api.mangadex.org/manga?title=${title}&includes[]=cover_art`
         );
         const mangaData = await mangaResponse.json();
         if (mangaData.data && mangaData.data.length > 0) {
-          setManga(mangaData.data[0]);  // Assuming the title matches exactly to one manga
-        }
+          const selectedManga = mangaData.data[0];
+          setManga(selectedManga);
 
-        const chaptersResponse = await fetch(
-          `https://api.mangadex.org/chapter?manga=${mangaData.data[0].id}&limit=20`
-        );
-        const chaptersData = await chaptersResponse.json();
-        setChapters(chaptersData.data || []);
+          const chaptersResponse = await fetch(
+            `https://api.mangadex.org/chapter?manga=${selectedManga.id}&limit=20`
+          );
+          const chaptersData = await chaptersResponse.json();
+          setChapters(chaptersData.data || []);
+        } else {
+          setManga(null);
+        }
       } catch (error) {
         console.error("Error fetching manga details:", error);
+        alert("Failed to load manga details. Please try again later.");
       } finally {
         setLoading(false);
       }
@@ -45,7 +50,7 @@ function MangaDetail({ user }) {
       return;
     }
 
-    setIsAdding(true); // Start the adding process
+    setIsAdding(true);
     try {
       const response = await fetch("http://127.0.0.1:5000/api/add-manga", {
         method: "POST",
@@ -68,22 +73,21 @@ function MangaDetail({ user }) {
       console.error("Error adding manga:", error);
       alert("An error occurred while adding manga to your history.");
     } finally {
-      setIsAdding(false); // End the adding process
+      setIsAdding(false);
     }
   };
 
-  // Function to display cover image or default image
   const getCoverImage = () => {
     const coverArt = manga?.relationships?.find(
       (rel) => rel.type === "cover_art"
     );
     return coverArt
       ? `https://uploads.mangadex.org/covers/${manga.id}/${coverArt?.attributes?.fileName}`
-      : "https://via.placeholder.com/150"; // Default image if no cover available
+      : "https://via.placeholder.com/150"; // Ảnh mặc định nếu không có
   };
 
   return (
-    <div className="p-4 bg-black text-white min-h-screen">
+    <div className="p-6 bg-black text-white min-h-screen transition-all">
       {loading ? (
         <div className="flex justify-center items-center">
           <div className="spinner-border text-green-500" role="status">
@@ -92,40 +96,40 @@ function MangaDetail({ user }) {
         </div>
       ) : manga ? (
         <>
-          <div className="flex flex-col md:flex-row items-center mb-8">
+          <div className="flex flex-col md:flex-row items-start mb-12 space-y-4 md:space-y-0">
             <img
               src={getCoverImage()}
               alt={manga.attributes?.title?.en || "Unknown Title"}
-              className="w-64 h-96 object-cover rounded-lg mb-4 md:mb-0 md:mr-8"
+              className="w-64 h-96 object-cover rounded-lg shadow-lg mb-4 md:mb-0 md:mr-8 transition-transform transform hover:scale-105"
             />
-            <div>
-              <h1 className="text-4xl font-bold text-green-400">
-                {manga.attributes?.title?.en || "Unknown Title"}
-              </h1>
-              <p className="mt-4">
+            <div className="md:w-full">
+              <h1 className="text-4xl font-bold text-green-400">{manga.attributes?.title?.en || "Unknown Title"}</h1>
+              <p className="mt-6 text-lg leading-relaxed text-gray-300 max-w-full">
                 {manga.attributes?.description?.en || "No description available."}
               </p>
-              <button
-                onClick={handleAddToRead}
-                className="bg-green-500 text-white p-2 mt-4 rounded"
-                disabled={isAdding} // Disable button during the add process
-              >
-                {isAdding ? "Adding..." : "Add to Read"}
-              </button>
+              <div className="mt-6">
+                <button
+                  onClick={handleAddToRead}
+                  className="bg-green-500 text-white px-8 py-4 rounded-lg hover:bg-green-600 transition-all duration-300 ease-in-out"
+                  disabled={isAdding}
+                >
+                  {isAdding ? "Adding..." : "Add to Read"}
+                </button>
+              </div>
             </div>
           </div>
 
           <div>
-            <h2 className="text-2xl font-bold mb-4">Chapters</h2>
-            <ul className="space-y-2">
+            <h2 className="text-3xl font-semibold mb-6">Chapters</h2>
+            <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {chapters.length > 0 ? (
                 chapters.map((chapter) => (
-                  <li key={chapter.id} className="bg-gray-800 p-2 rounded-lg">
+                  <li key={chapter.id} className="bg-gray-800 p-4 rounded-lg shadow-md hover:bg-gray-700 transition-colors">
                     <a
                       href={`https://mangadex.org/chapter/${chapter.id}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-green-400 hover:underline"
+                      className="text-green-400 hover:underline text-xl"
                     >
                       {chapter.attributes?.title ||
                         `Chapter ${chapter.attributes?.chapter}`}
@@ -139,13 +143,12 @@ function MangaDetail({ user }) {
           </div>
         </>
       ) : (
-        <p className="text-red-500">Manga not found.</p>
+        <p className="text-red-500 text-lg">Manga not found.</p>
       )}
     </div>
   );
 }
 
-// Define PropTypes for MangaDetail
 MangaDetail.propTypes = {
   user: PropTypes.shape({
     user_id: PropTypes.number.isRequired,

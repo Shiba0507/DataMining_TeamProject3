@@ -9,14 +9,15 @@ function Header({ user, onLogout }) {
 
     // Handle Search
     const handleSearch = (e) => {
-        if (e.key === 'Enter' && searchQuery.trim() !== '') {
+        if ((e.key === 'Enter' || e.type === 'click') && searchQuery.trim() !== '') {
             navigate(`/search?query=${searchQuery.trim()}`);
+            setSearchQuery(''); // Xóa nội dung sau khi tìm kiếm
         }
     };
 
     // Handle Emotion Click
     const handleEmotionClick = (emotion) => {
-        navigate(`/search-by-emotion?emotion=${emotion}`); // Chuyển hướng đến route đúng
+        navigate(`/search-by-emotion?emotion=${emotion}`);
     };
 
     // Handle login navigation
@@ -54,7 +55,10 @@ function Header({ user, onLogout }) {
                         onKeyDown={handleSearch}
                         className="p-2 pl-8 rounded-full bg-gray-100"
                     />
-                    <FaSearch className="absolute left-2 top-2 text-gray-500" />
+                    <FaSearch
+                        className="absolute left-2 top-2 text-gray-500 cursor-pointer"
+                        onClick={handleSearch}
+                    />
                 </div>
 
                 {/* Emotion Icons */}
@@ -64,30 +68,35 @@ function Header({ user, onLogout }) {
                         className="text-yellow-400 cursor-pointer hover:scale-110"
                         size={24}
                         onClick={() => handleEmotionClick('happy')}
+                        aria-label="Search for happy manga"
                     />
                     <FaSadTear
                         title="Sad"
                         className="text-blue-400 cursor-pointer hover:scale-110"
                         size={24}
                         onClick={() => handleEmotionClick('sad')}
+                        aria-label="Search for sad manga"
                     />
                     <FaAngry
                         title="Angry"
                         className="text-red-400 cursor-pointer hover:scale-110"
                         size={24}
                         onClick={() => handleEmotionClick('angry')}
+                        aria-label="Search for angry manga"
                     />
                     <FaSurprise
-                        title="Suprised"
+                        title="Surprised"
                         className="text-purple-400 cursor-pointer hover:scale-110"
                         size={24}
-                        onClick={() => handleEmotionClick('suprised')}
+                        onClick={() => handleEmotionClick('surprised')}
+                        aria-label="Search for surprised manga"
                     />
                     <FaLaugh
                         title="Funny"
                         className="text-green-400 cursor-pointer hover:scale-110"
                         size={24}
                         onClick={() => handleEmotionClick('funny')}
+                        aria-label="Search for funny manga"
                     />
                 </div>
             </div>
