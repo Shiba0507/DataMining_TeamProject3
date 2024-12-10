@@ -244,22 +244,19 @@ def get_manga_details(manga_id):
     else:
         return jsonify({"message": "Manga not found"}), 404
     
-
-    # API đề xuất manga dựa trên lịch sử đọc của người dùng
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from flask import jsonify
-
 @app.route('/api/recommend-manga/<int:user_id>', methods=['GET'])
 def recommend_manga(user_id):
     conn = get_db_connection()
     cursor = conn.cursor()
 
     # Fetch the user's reading history from the database
-    cursor.execute('''
+    cursor.execute(''' 
         SELECT manga_title, content 
         FROM manga_reading_history 
-        WHERE user_id = ?
+        WHERE user_id = ? 
     ''', (user_id,))
     user_history = cursor.fetchall()
 
@@ -297,24 +294,27 @@ def recommend_manga(user_id):
     recommended = []
 
     for idx, manga in enumerate(all_manga):
-        if manga['title'] not in read_titles:  # Exclude already-read manga
-            similarity_score = max(similarities[:, idx])  # Get the highest similarity score
-            if similarity_score > 0.05:  # Similarity threshold (can be adjusted)
+        if manga['title'] not in read_titles:  # Exclude manga already read by the user
+            # Check if the manga is not too similar to any of the user's read history
+            is_similar_to_read = any(similarity > 0.05 for similarity in similarities[:, idx])
+            if not is_similar_to_read:
                 recommended.append({
                     "manga_title": manga['title'],
                     "cover_image": manga['cover_image'],
                     "content": manga['content'],
-                    "similarity_score": similarity_score
+                    "similarity_score": max(similarities[:, idx])  # Get the highest similarity score
                 })
 
     # Sort recommendations by similarity score in descending order
     recommended = sorted(recommended, key=lambda x: x['similarity_score'], reverse=True)
 
-    # Return top 5 manga recommendations
+    # Return top 10 manga recommendations
     if recommended:
-        return jsonify(recommended[:5]), 200  # Limit to top 5 recommendations
+        return jsonify(recommended[:10]), 200  # Limit to top 10 recommendations
     else:
         return jsonify({"message": "No recommendations found based on your history."}), 404
+
+
 
 
 
@@ -323,7 +323,7 @@ emotion_keywords = {
     "happy": ["joy", "happy", "exciting", "cheerful", "delightful"],
     "sad": ["tragic", "emotional", "heartbreaking", "sorrowful", "melancholic"],
     "angry": ["furious", "rage", "angry", "upset", "frustrated"],
-    "suprised": ["suprising", "unexpected", "amazing", "astonishing", "shocking"],
+    "surprised": ["surprising", "unexpected", "amazing", "astonishing", "shocking"],
     "funny": ["humor", "funny", "comedy", "hilarious", "laugh"],
 }
 
@@ -334,6 +334,7 @@ def search_by_emotion():
     if not emotion:
         return jsonify({"error": "Emotion parameter is required"}), 400
 
+    # Retrieve keywords for the emotion
     keywords = emotion_keywords.get(emotion)
     if not keywords:
         return jsonify({"error": "Invalid emotion"}), 400
@@ -344,20 +345,30 @@ def search_by_emotion():
     manga_data = cursor.fetchall()
     conn.close()
 
-    # To keep track of unique manga based on title
+    # To keep track of unique manga based on title and content
     seen_titles = set()
+    seen_content = set()  # Additional set to track content uniqueness
 
     # Filter manga based on keywords and avoid duplicates
-    result = [
-        {
-            "title": manga[0],
-            "content": manga[1],
-            "cover_image": manga[2],
-        }
-        for manga in manga_data
-        if any(re.search(rf"\b{keyword}\b", manga[1], re.IGNORECASE) for keyword in keywords)
-        and manga[0] not in seen_titles and not seen_titles.add(manga[0])  # Ensure uniqueness by title
-    ]
+    result = []
+    for manga in manga_data:
+        title, content, cover_image = manga
+        
+        # Check for keyword matches
+        matches = sum(1 for keyword in keywords if re.search(rf"\b{keyword}\b", content, re.IGNORECASE))
+        
+        if matches > 0 and title not in seen_titles and content not in seen_content:
+            seen_titles.add(title)
+            seen_content.add(content)  # Add content to the set to avoid duplicates
+            result.append({
+                "title": title,
+                "content": content,
+                "cover_image": cover_image,
+                "match_score": matches  # Store the number of matches for sorting later
+            })
+
+    # Sort results by match_score (descending), then by title (ascending)
+    result.sort(key=lambda x: (-x["match_score"], x["title"]))
 
     if not result:
         return jsonify({"error": "No manga found matching the emotion"}), 404
@@ -373,7 +384,7 @@ if __name__ == '__main__':
     # Khởi tạo cơ sở dữ liệu (nếu chưa có)
     init_db()
     # Chạy luồng cập nhật manga
-    updater_thread = threading.Thread(target=continuously_update_manga, args=(60,), daemon=True)
+    updater_thread = threading.Thread(target=continuously_update_manga, args=(600,), daemon=True)
     updater_thread.start()
     app.run(debug=True)
 
