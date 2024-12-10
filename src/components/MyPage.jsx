@@ -96,19 +96,19 @@ function Mypage({ user, setUser }) {
                     </h2>
 
                     <div className="mb-6">
-    <h3 className="text-xl font-semibold text-green-400 mb-4">Your Manga Reading History</h3>
-    {loading ? (
-        <p>Loading your history...</p>
-    ) : mangaHistory.length > 0 ? (
-        <div className="overflow-y-auto space-y-4 max-h-[400px]">
-            {mangaHistory.map((item, index) => {
-                const coverArt = item.cover_image || null;
-                return (
+                        <h3 className="text-xl font-semibold text-green-400 mb-4">Your Manga Reading History</h3>
+                            {loading ? (
+                            <p>Loading your history...</p>
+                            ) : mangaHistory.length > 0 ? (
+                            <div className="overflow-y-auto space-y-4 max-h-[400px]">
+                                {mangaHistory.map((item, index) => {
+                                const coverArt = item.cover_image || null;
+                        return (
                     <div
                         key={index}
                         className="flex items-center bg-gray-800 p-4 rounded-lg shadow-md hover:shadow-xl transition-shadow"
                     >
-                        {/* Bìa truyện to hơn */}
+                
                         {coverArt ? (
                             <img
                                 src={coverArt}
@@ -185,9 +185,6 @@ function Mypage({ user, setUser }) {
         <p>No recommendations found.</p>
     )}
 </div>
-
-
-
 
                     {error && <p className="text-red-500 text-center mt-4">{error}</p>}
                 </>

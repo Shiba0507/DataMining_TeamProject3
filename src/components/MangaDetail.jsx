@@ -16,13 +16,18 @@ function MangaDetail({ user }) {
       setLoading(true);
       try {
         const mangaResponse = await fetch(
-          `https://api.mangadex.org/manga?title=${title}&includes[]=cover_art`
+          `https://api.mangadex.org/manga?title=${encodeURIComponent(title)}&includes[]=cover_art`
         );
         const mangaData = await mangaResponse.json();
+    
         if (mangaData.data && mangaData.data.length > 0) {
-          const selectedManga = mangaData.data[0];
+          // Tìm manga có tiêu đề khớp chính xác
+          const selectedManga = mangaData.data.find((manga) => 
+            manga.attributes?.title?.en?.toLowerCase() === title.toLowerCase()
+          ) || mangaData.data[0]; // Nếu không khớp, lấy kết quả đầu tiên
+    
           setManga(selectedManga);
-
+    
           const chaptersResponse = await fetch(
             `https://api.mangadex.org/chapter?manga=${selectedManga.id}&limit=20`
           );
@@ -38,6 +43,7 @@ function MangaDetail({ user }) {
         setLoading(false);
       }
     };
+    
 
     if (title) {
       fetchMangaDetails();
